@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Potcake Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #050505; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .accent-gradient { background: linear-gradient(135deg, #6d28d9 0%, #db2777 100%); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <header class="w-full max-w-md text-center mt-8 mb-6">
+        <h1 class="text-4xl font-black italic tracking-tighter accent-gradient bg-clip-text text-transparent inline-block">
+            POTCAKE VIEWER
+        </h1>
+        <p class="text-zinc-500 text-xs tracking-widest uppercase mt-1">ApeChain Explorer</p>
+    </header>
+
+    <div class="w-full max-w-md glass rounded-2xl p-2 flex items-center mb-6">
+        <input id="tokenId" type="number" placeholder="Enter Potcake ID" 
+               class="bg-transparent flex-1 px-4 py-3 text-lg focus:outline-none">
+        <button onclick="viewPotcake()" 
+                class="accent-gradient px-6 py-3 rounded-xl font-bold active:scale-95 transition-transform">
+            VIEW
+        </button>
+    </div>
+
+    <main id="displayArea" class="hidden w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div class="glass rounded-3xl overflow-hidden shadow-2xl">
+            <div class="relative">
+                <img id="potcakeImage" src="" class="w-full aspect-square object-cover">
+                <div class="absolute top-4 left-4 glass px-3 py-1 rounded-full text-xs font-bold">
+                    APECHAIN NATIVE
+                </div>
+            </div>
+            <div class="p-6">
+                <h2 id="potcakeName" class="text-2xl font-bold mb-4 italic">Potcake #--</h2>
+                <div id="traits" class="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-tighter">
+                    </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="status" class="mt-8 text-zinc-600 text-sm font-medium">Ready to fetch...</div>
+
+    <script>
+        const CONTRACT_ADDRESS = "0xb9a48902dccdf4fef09ab6b46be4161552519898"; 
+        // Using a more stable public RPC
+        const RPC_URL = "https://rpc.apechain.com/http";
+        const ABI = ["function tokenURI(uint256 tokenId) view returns (string)"];
+
+        async function viewPotcake() {
+            const id = document.getElementById('tokenId').value;
+            const status = document.getElementById('status');
+            const display = document.getElementById('displayArea');
+            
+            if(!id) return;
+
+            status.innerText = "Connecting to ApeChain...";
+            display.classList.add('hidden');
+
+            try {
+                const provider = new ethers.JsonRpcProvider(RPC_URL);
+                const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+                
+                // Fetch URI from contract
+                const uri = await contract.tokenURI(id);
+                
+                // Convert IPFS to Gateway
+                const url = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
+                
+                status.innerText = "Fetching Metadata...";
+                const response = await fetch(url);
+                const meta = await response.json();
+
+                // Update Image & Name
+                const img = meta.image.replace("ipfs://", "https://ipfs.io/ipfs/");
+                document.getElementById('potcakeImage').src = img;
+                document.getElementById('potcakeName').innerText = meta.name || `Potcake #${id}`;
+
+                // Update Traits
+                const traitContainer = document.getElementById('traits');
+                traitContainer.innerHTML = '';
+                if(meta.attributes) {
+                    meta.attributes.forEach(attr => {
+                        const div = document.createElement('div');
+                        div.className = "bg-white/5 p-2 rounded-lg border border-white/5";
+                        div.innerHTML = `<span class="text-zinc-500 block">${attr.trait_type}</span> <span class="text-white font-bold">${attr.value}</span>`;
+                        traitContainer.appendChild(div);
+                    });
+                }
+
+                display.classList.remove('hidden');
+                status.innerText = "Loaded Successfully.";
+            } catch (err) {
+                console.error(err);
+                status.innerText = "Error: Token not minted or RPC timeout.";
+            }
+        }
+
+        // Keyboard support
+        document.getElementById('tokenId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') viewPotcake();
+        });
+    </script>
+</body>
+</html>
