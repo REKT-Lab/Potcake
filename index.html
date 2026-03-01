@@ -1,56 +1,142 @@
-<div class="w-full max-w-sm mb-6">
-    <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 ml-2">Choose Your Island</p>
-    <div class="grid grid-cols-4 gap-2">
-        <button onclick="changeScene(0)" class="h-12 rounded-xl border border-white/10 bg-cover bg-center overflow-hidden active:scale-95 transition-transform" style="background-image: url('https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=200&q=60')"></button>
-        <button onclick="changeScene(1)" class="h-12 rounded-xl border border-white/10 bg-cover bg-center overflow-hidden active:scale-95 transition-transform" style="background-image: url('https://images.unsplash.com/photo-1589394815804-c147da211d43?auto=format&fit=crop&w=200&q=60')"></button>
-        <button onclick="changeScene(2)" class="h-12 rounded-xl border border-white/10 bg-cover bg-center overflow-hidden active:scale-95 transition-transform" style="background-image: url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=200&q=60')"></button>
-        <button onclick="changeScene(3)" class="h-12 rounded-xl border border-white/10 bg-cover bg-center overflow-hidden active:scale-95 transition-transform" style="background-image: url('https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=200&q=60')"></button>
-    </div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Potcake Lab: Bahamas Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #050505; color: white; font-family: system-ui, sans-serif; }
+        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .scene-btn { height: 50px; border-radius: 12px; border: 2px solid transparent; background-size: cover; background-position: center; transition: 0.2s; }
+        .scene-btn.active { border-color: #06b6d4; transform: scale(1.05); }
+        #mainCanvas { width: 100%; border-radius: 2rem; background: #000; box-shadow: 0 20px 50px rgba(0,0,0,0.8); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
 
-<script>
-// --- ADD TO YOUR GLOBAL VARIABLES ---
-const SCENES = [
-    "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1200&q=80", // Classic Nassau
-    "https://images.unsplash.com/photo-1589394815804-c147da211d43?auto=format&fit=crop&w=1200&q=80", // Turquoise Exuma
-    "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=1200&q=80", // Sunset Palms
-    "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=1200&q=80"  // Aerial Reef
-];
-let currentSceneIndex = 0;
+    <header class="text-center my-6">
+        <h1 class="text-3xl font-black italic tracking-tighter bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">POTCAKE VIEWER</h1>
+        <p class="text-[9px] text-zinc-500 uppercase tracking-[0.3em] font-bold">Bahamas Edition</p>
+    </header>
 
-// --- UPDATE YOUR RENDER FUNCTION ---
-function renderMaskedScene() {
-    canvas.width = potcakeImg.width;
-    canvas.height = potcakeImg.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (isIsland) {
-        const bgImg = new Image();
-        bgImg.crossOrigin = "anonymous";
-        bgImg.src = SCENES[currentSceneIndex]; // Uses the selected scene
+    <div class="w-full max-w-sm glass rounded-[2.5rem] p-5 mb-4">
+        <div class="flex gap-2 mb-4">
+            <input id="tokenId" type="number" placeholder="Enter ID" class="bg-white/5 flex-1 px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-cyan-500">
+            <button onclick="fetchAndProcess()" class="bg-white text-black px-6 py-3 rounded-xl font-black text-xs active:scale-95 transition-all">GO</button>
+        </div>
         
-        bgImg.onload = () => {
-            // Draw background first
-            ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-            
-            // Apply the cookie-cutter mask
-            ctx.globalCompositeOperation = "destination-in";
-            ctx.drawImage(maskCanvas, 0, 0); 
-            
-            // Draw the Potcake on top
-            ctx.globalCompositeOperation = "source-over";
-            ctx.drawImage(potcakeImg, 0, 0);
-        };
-    } else {
-        // Standard draw if island mode is off
-        ctx.drawImage(potcakeImg, 0, 0);
-    }
-}
+        <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Select Scene</p>
+        <div class="grid grid-cols-4 gap-2 mb-4">
+            <button onclick="changeScene(0)" id="s0" class="scene-btn active" style="background-image: url('https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=150&q=60')"></button>
+            <button onclick="changeScene(1)" id="s1" class="scene-btn" style="background-image: url('https://images.unsplash.com/photo-1589394815804-c147da211d43?auto=format&fit=crop&w=150&q=60')"></button>
+            <button onclick="changeScene(2)" id="s2" class="scene-btn" style="background-image: url('https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=150&q=60')"></button>
+            <button onclick="changeScene(3)" id="s3" class="scene-btn" style="background-image: url('https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=150&q=60')"></button>
+        </div>
 
-function changeScene(index) {
-    currentSceneIndex = index;
-    isIsland = true; // Auto-enable island mode when a scene is picked
-    document.getElementById('islandBtn').classList.add('active-mode');
-    renderMaskedScene();
-}
-</script>
+        <button onclick="downloadPotcake()" class="w-full py-3 rounded-xl border border-white/10 bg-white/5 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all">Save Image</button>
+    </div>
+
+    <div class="w-full max-w-sm relative">
+        <canvas id="mainCanvas"></canvas>
+        <p id="status" class="text-center mt-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Ready to Fetch</p>
+    </div>
+
+    <script>
+        const CONTRACT = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
+        const RPC = "https://rpc.apechain.com/http";
+        const SCENES = [
+            "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1000&q=80",
+            "https://images.unsplash.com/photo-1589394815804-c147da211d43?auto=format&fit=crop&w=1000&q=80",
+            "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=1000&q=80",
+            "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=1000&q=80"
+        ];
+
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        let potcakeImg = new Image();
+        let maskCanvas = document.createElement('canvas');
+        let currentSceneIdx = 0;
+        let isLoaded = false;
+
+        async function fetchAndProcess() {
+            const val = document.getElementById('tokenId').value;
+            if(!val) return;
+            const id = parseInt(val) - 1;
+            
+            document.getElementById('status').innerText = "Accessing ApeChain...";
+            try {
+                const provider = new ethers.JsonRpcProvider(RPC);
+                const contract = new ethers.Contract(CONTRACT, ["function tokenURI(uint256) view returns (string)"], provider);
+                const uri = await contract.tokenURI(id);
+                const meta = await (await fetch(uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"))).json();
+                
+                potcakeImg = new Image();
+                potcakeImg.crossOrigin = "anonymous";
+                potcakeImg.src = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                potcakeImg.onload = () => {
+                    isLoaded = true;
+                    createMask(potcakeImg);
+                    render();
+                    document.getElementById('status').innerText = `Viewing Potcake #${val}`;
+                };
+            } catch (e) { document.getElementById('status').innerText = "Fetch Error"; }
+        }
+
+        function createMask(img) {
+            maskCanvas.width = img.width;
+            maskCanvas.height = img.height;
+            const mCtx = maskCanvas.getContext('2d');
+            mCtx.drawImage(img, 0, 0);
+            const data = mCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+            const px = data.data;
+            const r=px[0], g=px[1], b=px[2];
+
+            for (let i = 0; i < px.length; i += 4) {
+                if (Math.abs(px[i]-r) < 50 && Math.abs(px[i+1]-g) < 50 && Math.abs(px[i+2]-b) < 50) {
+                    px[i+3] = 0;
+                } else {
+                    px[i]=255; px[i+1]=255; px[i+2]=255; px[i+3]=255;
+                }
+            }
+            mCtx.putImageData(data, 0, 0);
+        }
+
+        function render() {
+            if(!isLoaded) return;
+            canvas.width = potcakeImg.width;
+            canvas.height = potcakeImg.height;
+            
+            const bgImg = new Image();
+            bgImg.crossOrigin = "anonymous";
+            bgImg.src = SCENES[currentSceneIdx];
+            bgImg.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+                
+                // The Cookie Cutter Logic
+                ctx.globalCompositeOperation = "destination-in";
+                ctx.drawImage(maskCanvas, 0, 0);
+                
+                ctx.globalCompositeOperation = "source-over";
+                ctx.drawImage(potcakeImg, 0, 0);
+            };
+        }
+
+        function changeScene(idx) {
+            currentSceneIdx = idx;
+            document.querySelectorAll('.scene-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+            if(isLoaded) render();
+        }
+
+        function downloadPotcake() {
+            const link = document.createElement('a');
+            link.download = `potcake-bahamas.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }
+    </script>
+</body>
+</html>
