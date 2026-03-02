@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Potcake Paradise</title>
+    <title>Potcake Paradise | Survivor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -49,10 +49,10 @@
         <div class="wood-panel p-8 max-w-xs text-center">
             <h2 class="text-3xl font-black gold-text mb-4 italic">ISLAND RULES</h2>
             <div class="space-y-3 text-orange-100 text-sm mb-6 font-sans text-left">
-                <p>❤️ Start with **2 Lives**. Missing a bone costs 1 life!</p>
-                <p>✨ **Big Bones** = 3x Score Surge!</p>
-                <p>🐶 Catch the **Potcake** for +1 Life (Max 3).</p>
-                <p>🌅 Survival shifts the sky from Day to Night.</p>
+                <p>❤️ Start with **2 Lives**. Don't miss!</p>
+                <p>✨ **Big Bones** = +3 Points Surge!</p>
+                <p>🐶 Catch the **Potcake** for +1 Life.</p>
+                <p>🌅 Survive to see the sunset!</p>
             </div>
             <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs tracking-widest">Enter Paradise</button>
         </div>
@@ -77,14 +77,14 @@
     <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-4 z-10 ui-fade">
         <div id="load-box" class="flex flex-col gap-3 relative z-10">
             <div class="flex gap-2 w-full">
-                <input id="tokenId" type="number" placeholder="Enter ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
+                <input id="tokenId" type="number" placeholder="Enter ID (e.g. 50)" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
                 <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs">LOAD</button>
             </div>
             <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest">Start Game</button>
         </div>
         <div id="loading-state" class="hidden flex items-center justify-center gap-4 py-2 relative z-10">
             <span class="loader"></span>
-            <p class="text-[10px] font-bold gold-text uppercase">Syncing <span id="load-pc">0</span>%</p>
+            <p class="text-[10px] font-bold gold-text uppercase">Syncing NFT Data...</p>
         </div>
     </div>
 
@@ -104,7 +104,7 @@
                     <button onclick="startGame()" class="btn-wood py-4 rounded-xl font-black text-xs uppercase tracking-widest">Retry</button>
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="shareScore()" class="bg-sky-900 text-white py-3 rounded-xl font-black text-[9px] uppercase">X Post</button>
-                        <button onclick="saveScreenshot(event)" class="bg-emerald-800 text-white py-3 rounded-xl font-black text-[9px] uppercase font-sans">Save PNG 📸</button>
+                        <button onclick="saveScreenshot(event)" class="bg-emerald-800 text-white py-3 rounded-xl font-black text-[9px] uppercase">Save 📸</button>
                     </div>
                 </div>
             </div>
@@ -117,17 +117,20 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
-        let potcakeImg = new Image(), backgroundImg = new Image();
+        let potcakeImg = new Image();
+        let backgroundImg = new Image();
         backgroundImg.crossOrigin = "anonymous";
         backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
+
+        // Initial setup for potcakeImg to prevent crash if not loaded
+        potcakeImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
 
         const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
         const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
         const failSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3');
-        const heartSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3');
         bgMusic.loop = true;
 
-        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 80, items = [], gameSpeed = 3.5, woofTimer = 0;
+        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 80, items = [], gameSpeed = 3.5;
         let highScore = localStorage.getItem('potcakeBest') || 0;
         document.getElementById('high-score-display').innerText = highScore;
 
@@ -137,37 +140,47 @@
             document.getElementById('life-display').innerText = "❤️".repeat(lives);
         }
 
-        function getEnvironmentColor() {
-            if (score < 10) return "transparent";
-            if (score < 25) return "rgba(255, 100, 0, 0.2)";
-            if (score < 50) return "rgba(100, 0, 255, 0.3)";
-            return "rgba(0, 0, 50, 0.5)";
-        }
-
         async function fetchPotcake() {
             const idInput = document.getElementById('tokenId').value;
             if(!idInput) return;
+            
             document.getElementById('load-box').classList.add('hidden');
             document.getElementById('loading-state').classList.remove('hidden');
-            let pc = 0;
-            let timer = setInterval(() => {
-                pc += 10; if(pc >= 100) clearInterval(timer);
-                document.getElementById('load-pc').innerText = pc;
-            }, 50);
+
             try {
                 const provider = new ethers.JsonRpcProvider(RPC);
                 const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
-                const uri = await contract.tokenURI(parseInt(idInput) - 1);
-                const meta = await (await fetch(uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"))).json();
+                
+                // Fetch URI from ApeChain
+                const uri = await contract.tokenURI(parseInt(idInput));
+                const httpUri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
+                
+                const response = await fetch(httpUri);
+                const meta = await response.json();
+                
+                const imageUri = meta.image.replace("ipfs://", "https://ipfs.io/ipfs/");
+                
                 potcakeImg = new Image();
                 potcakeImg.crossOrigin = "anonymous";
-                potcakeImg.src = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                potcakeImg.src = imageUri;
+                
                 potcakeImg.onload = () => {
                     document.getElementById('loading-state').classList.add('hidden');
                     document.getElementById('load-box').classList.remove('hidden');
                     document.getElementById('start-btn').classList.remove('hidden');
+                    renderPreview();
                 };
-            } catch(e) { alert("NFT Error!"); }
+            } catch(e) {
+                console.error(e);
+                alert("Could not load NFT. Try a different ID or check connection.");
+                document.getElementById('loading-state').classList.add('hidden');
+                document.getElementById('load-box').classList.remove('hidden');
+            }
+        }
+
+        function renderPreview() {
+            ctx.drawImage(backgroundImg, 0, 0, 400, 400);
+            ctx.drawImage(potcakeImg, 160, 300, 80, 80);
         }
 
         function startGame() {
@@ -175,11 +188,13 @@
             score = 0; lives = 2; items = []; gameSpeed = 3.5; playerX = 160;
             updateLifeUI();
             document.getElementById('score-display').innerText = "0";
+            
             let count = 3;
             const cBox = document.getElementById('countdown-box');
             const cNum = document.getElementById('count-num');
             cBox.style.display = 'flex';
             cNum.innerText = count;
+            
             const timer = setInterval(() => {
                 count--;
                 if(count > 0) { cNum.innerText = count; } else {
@@ -193,67 +208,43 @@
             if (!gameActive) return;
             ctx.clearRect(0, 0, 400, 400);
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            const tint = getEnvironmentColor();
-            if (tint !== "transparent") { ctx.fillStyle = tint; ctx.fillRect(0, 0, 400, 400); }
+            
+            // Sunset tint
+            if(score > 15) {
+                ctx.fillStyle = "rgba(255, 100, 0, 0.15)";
+                ctx.fillRect(0,0,400,400);
+            }
 
-            ctx.save();
-            if (score >= 5) { ctx.shadowBlur = Math.min(score, 40); ctx.shadowColor = "#fbbf24"; }
             ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
-            ctx.restore();
 
-            // Spawn Logic
             if (Math.random() < 0.03 + (score * 0.001)) {
                 let type = "normal";
-                let rand = Math.random();
-                if (rand < 0.05) type = "life";      // 5% Extra Life
-                else if (rand < 0.15) type = "mega"; // 10% Big Bone
+                let r = Math.random();
+                if (r < 0.04) type = "life";
+                else if (r < 0.14) type = "mega";
                 
-                items.push({ 
-                    x: Math.random() * 350, 
-                    y: -20, 
-                    speed: gameSpeed + (Math.random() * 2), 
-                    rot: 0, 
-                    type: type 
-                });
+                items.push({ x: Math.random() * 350, y: -20, speed: gameSpeed + (Math.random() * 2), type: type });
             }
 
             items.forEach((item, index) => {
-                item.y += item.speed; item.rot += 0.05;
-                ctx.save(); ctx.translate(item.x, item.y); ctx.rotate(item.rot);
-                
-                if (item.type === "mega") {
-                    ctx.font = "50px serif"; 
-                    ctx.shadowBlur = 15; ctx.shadowColor = "gold";
-                    ctx.fillText("🦴", 0, 0);
-                } else if (item.type === "life") {
-                    ctx.font = "35px serif"; ctx.fillText("🐶", 0, 0);
-                } else {
-                    ctx.font = "30px serif"; ctx.fillText("🦴", 0, 0);
-                }
-                ctx.restore();
+                item.y += item.speed;
+                ctx.font = item.type === "mega" ? "50px serif" : "30px serif";
+                let icon = item.type === "life" ? "🐶" : "🦴";
+                ctx.fillText(icon, item.x, item.y);
 
-                // Collision
-                if (item.y > 300 && item.y < 380 && item.x > playerX - 10 && item.x < playerX + playerWidth + 10) {
-                    if (item.type === "mega") {
-                        score += 3;
-                        catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
-                    } else if (item.type === "life") {
-                        if (lives < 3) lives++;
-                        updateLifeUI();
-                        heartSfx.play().catch(e => {});
-                    } else {
-                        score++;
-                        catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
-                    }
+                if (item.y > 300 && item.y < 380 && item.x > playerX - 15 && item.x < playerX + playerWidth + 5) {
+                    if (item.type === "mega") score += 3;
+                    else if (item.type === "life") { if(lives < 3) lives++; updateLifeUI(); }
+                    else score++;
+                    
                     items.splice(index, 1);
-                    gameSpeed += 0.05;
+                    catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
                     document.getElementById('score-display').innerText = score;
                 }
 
-                // Missed Bone
-                if (item.y > 400) {
+                if (item.y > 410) {
                     items.splice(index, 1);
-                    if (item.type === "normal" || item.type === "mega") {
+                    if (item.type !== "life") {
                         lives--;
                         updateLifeUI();
                         if (lives <= 0) endGame();
@@ -280,19 +271,15 @@
             playerX = Math.max(0, Math.min(320, playerX));
         });
 
-        function saveScreenshot(e) {
-            ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
-            ctx.fillStyle = "white"; ctx.font = "bold 30px Georgia";
-            ctx.fillText(`BONES: ${score}`, 20, 50);
+        function saveScreenshot() {
             const link = document.createElement('a');
-            link.download = `Potcake_Score_${score}.png`;
-            link.href = canvas.toDataURL("image/png");
+            link.download = 'potcake_score.png';
+            link.href = canvas.toDataURL();
             link.click();
         }
 
         function shareScore() {
-            const text = `Survived the island night with ${score} bones! 🦴✨\n\nOfficial Collection: https://opensea.io/collection/potcake-rescue\n\n@potcakenft`;
+            const text = `I just hit ${score} bones in Potcake Paradise! 🏝️🦴\n\nPlay here: [Your Link]\n\n@potcakenft`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`);
         }
     </script>
