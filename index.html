@@ -7,6 +7,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Potcake Paradise 🏝️🦴">
     <meta name="twitter:description" content="Play with your Potcake NFT on ApeChain! Catch bones and glow gold.">
+    <meta name="twitter:image" content="https://rekt-lab.github.io/preview.png">
+    <meta name="twitter:site" content="@potcakenft">
 
     <title>Potcake Paradise</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
@@ -41,10 +43,7 @@
         #instruction-overlay { display: flex; }
 
         .gold-text { color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
-        .btn-wood { 
-            background: #5d4037; border-bottom: 4px solid #3e2723; 
-            transition: all 0.1s; color: #ffe0b2; 
-        }
+        .btn-wood { background: #5d4037; border-bottom: 4px solid #3e2723; transition: all 0.1s; color: #ffe0b2; }
         .btn-wood:active { transform: translateY(2px); border-bottom-width: 2px; }
         
         .loader { width: 30px; height: 30px; border: 4px solid #fbbf24; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
@@ -52,13 +51,19 @@
         
         .ui-fade { transition: opacity 0.4s ease; opacity: 1; }
         .hidden-ui { opacity: 0 !important; pointer-events: none !important; }
-        
-        #view-mode-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: none; }
+
+        #screenshot-hint { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 15px; text-align: center; border: 2px solid #fbbf24; }
+        #view-mode-return { display: none; position: fixed; bottom: 30px; z-index: 150; background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 20px; font-size: 10px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.2); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
 
-    <div id="view-mode-hint" class="text-[10px] text-white/40 uppercase tracking-[0.2em]">Tap anywhere to return</div>
+    <div id="screenshot-hint">
+        <p class="gold-text font-bold text-lg mb-1">GET READY!</p>
+        <p class="text-white text-xs">Clearing UI... Take your screenshot!</p>
+    </div>
+
+    <button id="view-mode-return" onclick="exitViewMode()">Tap to Return</button>
 
     <div id="instruction-overlay">
         <div class="wood-panel p-8 max-w-xs text-center">
@@ -75,7 +80,7 @@
     <div id="main-header" class="my-6 text-center ui-fade">
         <h1 class="text-3xl font-black italic tracking-tighter gold-text">POTCAKE PARADISE</h1>
         <div class="flex justify-center gap-6 text-[10px] font-bold uppercase tracking-widest text-orange-200/50 mt-1">
-            <p>Bones: <span id="score-display" class="text-white">0</span></p>
+            <p>Score: <span id="score-display" class="text-white">0</span></p>
             <p>Best: <span id="high-score-display" class="gold-text">0</span></p>
             <button onclick="toggleMute()" id="mute-btn" class="underline">Mute</button>
         </div>
@@ -84,14 +89,14 @@
     <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-6 z-10 ui-fade">
         <div id="load-box" class="flex flex-col gap-3 relative z-10">
             <div class="flex gap-2 w-full">
-                <input id="tokenId" type="number" placeholder="Potcake ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none font-sans">
+                <input id="tokenId" type="number" placeholder="ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
                 <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs">LOAD</button>
             </div>
             <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest">Start Game</button>
         </div>
         <div id="loading-state" class="hidden flex items-center justify-center gap-4 py-2 relative z-10">
             <span class="loader"></span>
-            <p class="text-[10px] font-bold gold-text uppercase tracking-widest">Syncing <span id="load-pc">0</span>%</p>
+            <p class="text-[10px] font-bold gold-text uppercase">Syncing <span id="load-pc">0</span>%</p>
         </div>
     </div>
 
@@ -100,7 +105,7 @@
         <div id="status-text" class="text-center mt-4 text-[10px] text-orange-200/30 uppercase tracking-widest font-bold ui-fade italic">ApeChain Connectivity: Active</div>
         
         <div id="game-over-screen">
-            <div class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
+            <div id="go-wood" class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
                 <div id="rank-badge" class="text-7xl font-black mb-2 gold-text italic">S</div>
                 <p id="final-score" class="text-5xl font-black mb-8 italic text-white">0</p>
                 <div id="game-over-btns" class="flex flex-col gap-3 w-full ui-fade relative z-10">
@@ -108,7 +113,7 @@
                     <div class="grid grid-cols-3 gap-2">
                         <button onclick="shareScore()" class="bg-sky-900 text-white py-3 rounded-xl font-black text-[9px] uppercase">X Post</button>
                         <button onclick="saveScreenshot(event)" class="bg-emerald-800 text-white py-3 rounded-xl font-black text-[9px] uppercase">Save 📸</button>
-                        <button onclick="screenshotMode()" class="bg-amber-900 text-amber-100 py-3 rounded-xl font-black text-[9px] uppercase">View 🏝️</button>
+                        <button onclick="screenshotMode()" class="bg-amber-900 text-amber-100 py-3 rounded-xl font-black text-[9px] uppercase tracking-tighter">Screenshot</button>
                     </div>
                 </div>
             </div>
@@ -137,46 +142,63 @@
         function hideInstructions() { document.getElementById('instruction-overlay').style.display = 'none'; }
         function toggleMute() { isMuted = !isMuted; bgMusic.muted = isMuted; catchSfx.muted = isMuted; failSfx.muted = isMuted; document.getElementById('mute-btn').innerText = isMuted ? "Unmute" : "Mute"; }
 
-        // --- NEW VIEW MODE RETURN ---
         function screenshotMode() {
-            const elements = ['main-header', 'input-panel', 'status-text', 'game-over-screen'];
-            elements.forEach(id => {
-                if(id === 'game-over-screen') document.getElementById(id).style.background = "transparent";
-                else document.getElementById(id).classList.add('hidden-ui');
-            });
-            document.getElementById('view-mode-hint').style.display = "block";
+            const hint = document.getElementById('screenshot-hint');
+            hint.style.display = 'block';
             
-            // Return on Tap
-            const returnUI = () => {
-                elements.forEach(id => {
-                    if(id === 'game-over-screen') document.getElementById(id).style.background = "rgba(10, 5, 0, 0.94)";
-                    else document.getElementById(id).classList.remove('hidden-ui');
-                });
-                document.getElementById('view-mode-hint').style.display = "none";
-                window.removeEventListener('touchstart', returnUI);
-            };
-            setTimeout(() => window.addEventListener('touchstart', returnUI), 500);
+            setTimeout(() => {
+                hint.style.display = 'none';
+                document.getElementById('go-wood').classList.add('hidden-ui');
+                document.getElementById('game-over-screen').style.background = "transparent";
+                document.getElementById('main-header').classList.add('hidden-ui');
+                document.getElementById('input-panel').classList.add('hidden-ui');
+                document.getElementById('status-text').classList.add('hidden-ui');
+                document.getElementById('view-mode-return').style.display = "block";
+                
+                // Draw frame with score AND watermark
+                renderStaticFrame(true);
+            }, 1500);
         }
 
-        // --- FIXED SAVE PHOTO LOGIC ---
-        function saveScreenshot(e) {
-            // Re-render frame one time with score text for the photo
+        function exitViewMode() {
+            document.getElementById('go-wood').classList.remove('hidden-ui');
+            document.getElementById('game-over-screen').style.background = "rgba(10, 5, 0, 0.94)";
+            document.getElementById('main-header').classList.remove('hidden-ui');
+            document.getElementById('input-panel').classList.remove('hidden-ui');
+            document.getElementById('status-text').classList.remove('hidden-ui');
+            document.getElementById('view-mode-return').style.display = "none";
+            renderStaticFrame(false);
+        }
+
+        // --- ENHANCED RENDER FRAME WITH WATERMARK ---
+        function renderStaticFrame(withDetails) {
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
             ctx.save();
             if (score >= 5) { ctx.shadowBlur = 40; ctx.shadowColor = "#fbbf24"; }
             ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
             ctx.restore();
             
-            // Add score label to photo
-            ctx.fillStyle = "#fbbf24"; ctx.font = "bold 20px Georgia";
-            ctx.fillText(`Score: ${score}`, 20, 40);
-            ctx.font = "italic 14px Georgia"; ctx.fillText("Potcake Paradise", 20, 65);
+            if (withDetails) {
+                // Draw Score Label
+                ctx.fillStyle = "white"; ctx.font = "bold 30px Georgia";
+                ctx.fillText(`BONES: ${score}`, 20, 50);
 
+                // Draw Watermark
+                ctx.fillStyle = "rgba(255, 255, 255, 0.4)"; // Subdued white
+                ctx.font = "italic 12px Georgia";
+                ctx.textAlign = "right";
+                ctx.fillText("Made with 🥥 in Potcake Paradise", 380, 385);
+            }
+        }
+
+        function saveScreenshot(e) {
+            renderStaticFrame(true); // render with watermark
             const link = document.createElement('a');
             link.download = `Potcake_Score_${score}.png`;
             link.href = canvas.toDataURL("image/png");
             link.click();
-            e.target.innerText = "DONE! ✅";
+            renderStaticFrame(false); // remove watermark for normal game over view
+            e.target.innerText = "SAVED! ✅";
             setTimeout(() => { e.target.innerText = "SAVE 📸"; }, 2000);
         }
 
@@ -203,8 +225,7 @@
                     document.getElementById('loading-state').classList.add('hidden');
                     document.getElementById('load-box').classList.remove('hidden');
                     document.getElementById('start-btn').classList.remove('hidden');
-                    ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-                    ctx.drawImage(potcakeImg, 160, 280, 80, 80);
+                    renderStaticFrame(false);
                 };
             } catch(e) { alert("NFT Error!"); }
         }
@@ -221,7 +242,6 @@
             if (!gameActive) return;
             ctx.clearRect(0, 0, 400, 400);
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            
             ctx.save();
             if (score >= 5) { ctx.shadowBlur = Math.min(score * 2, 50); ctx.shadowColor = "#fbbf24"; }
             ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
