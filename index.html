@@ -56,12 +56,12 @@
 
     <div id="instruction-overlay">
         <div class="wood-panel p-8 max-w-xs text-center">
-            <h2 class="text-3xl font-black gold-text mb-4 italic">ISLAND RULES</h2>
+            <h2 class="text-3xl font-black gold-text mb-4 italic uppercase">Island Rules</h2>
             <div class="space-y-3 text-orange-100 text-sm mb-6 font-sans text-left">
-                <p>❤️ Start with **2 Lives**.</p>
+                <p>❤️ Start with **2 Lives**. Don't miss!</p>
                 <p>✨ **Big Bones** = +3 Points & Heavy Shake!</p>
                 <p>🐶 Catch the **Potcake** for +1 Life (Max 3).</p>
-                <p>🚀 Share your score to grow the pack!</p>
+                <p>🚀 High Scores unlock the **Golden Shine**!</p>
             </div>
             <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs tracking-widest">Enter Paradise</button>
         </div>
@@ -91,7 +91,7 @@
             </div>
             <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase">Start Game</button>
         </div>
-        <div id="loading-state" class="hidden flex items-center justify-center gap-4 py-2">
+        <div id="loading-state" class="hidden flex flex-col items-center justify-center gap-2 py-2">
             <span class="loader"></span>
             <p class="text-[10px] font-bold gold-text uppercase">Syncing NFT Data...</p>
         </div>
@@ -127,9 +127,9 @@
         backgroundImg.crossOrigin = "anonymous";
         backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
 
-        // Pre-set potcake image properties
+        const defaultDog = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
         potcakeImg.crossOrigin = "anonymous";
-        potcakeImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
+        potcakeImg.src = defaultDog;
 
         const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
         const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
@@ -160,29 +160,36 @@
             document.getElementById('load-box').classList.add('hidden');
             document.getElementById('loading-state').classList.remove('hidden');
 
+            // Force proceed after 5 seconds if connection hangs
+            const timeout = setTimeout(() => {
+                alert("Connection slow. Using default Potcake!");
+                finalizeLoading();
+            }, 5500);
+
             try {
                 const provider = new ethers.JsonRpcProvider(RPC);
                 const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
                 const uri = await contract.tokenURI(parseInt(idInput));
-                
-                // Use Cloudflare for more reliable loading
                 const httpUri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
                 const meta = await (await fetch(httpUri)).json();
                 const imageUri = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
                 
-                // Update existing image object to maintain CORS
                 potcakeImg.src = imageUri;
                 potcakeImg.onload = () => {
-                    document.getElementById('loading-state').classList.add('hidden');
-                    document.getElementById('load-box').classList.remove('hidden');
-                    document.getElementById('start-btn').classList.remove('hidden');
+                    clearTimeout(timeout);
+                    finalizeLoading();
                 };
             } catch(e) {
-                console.error("NFT Error:", e);
-                document.getElementById('loading-state').classList.add('hidden');
-                document.getElementById('load-box').classList.remove('hidden');
-                document.getElementById('start-btn').classList.remove('hidden');
+                console.error(e);
+                clearTimeout(timeout);
+                finalizeLoading();
             }
+        }
+
+        function finalizeLoading() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('load-box').classList.remove('hidden');
+            document.getElementById('start-btn').classList.remove('hidden');
         }
 
         function startGame() {
@@ -192,6 +199,8 @@
             document.getElementById('score-display').innerText = "0";
             let count = 3;
             document.getElementById('countdown-box').style.display = 'flex';
+            document.getElementById('count-num').innerText = count;
+            
             const timer = setInterval(() => {
                 count--;
                 if(count > 0) document.getElementById('count-num').innerText = count;
@@ -209,9 +218,18 @@
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
             
             if(score > 15) { ctx.fillStyle = "rgba(255, 100, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
-            if(lives === 1) { ctx.fillStyle = "rgba(255, 0, 0, 0.1)"; ctx.fillRect(0,0,400,400); }
+            if(lives === 1) { ctx.fillStyle = "rgba(255, 0, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
 
-            ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
+            // Golden Shine Effect at score 50
+            if (score >= 50) {
+                ctx.save();
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = "gold";
+                ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
+                ctx.restore();
+            } else {
+                ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
+            }
 
             if (Math.random() < 0.03 + (score * 0.001)) {
                 let type = "normal";
@@ -243,6 +261,7 @@
 
         function endGame() {
             gameActive = false; bgMusic.pause(); failSfx.play().catch(()=>{});
+            canvas.classList.remove('danger-pulse');
             if (score > highScore) { highScore = score; localStorage.setItem('potcakeBest', highScore); }
             document.getElementById('game-over-screen').style.display = 'flex';
             document.getElementById('final-score').innerText = score;
@@ -252,7 +271,8 @@
             const rect = canvas.getBoundingClientRect();
             playerX = ((e.touches[0].clientX - rect.left) / rect.width * 400) - playerWidth / 2;
             playerX = Math.max(0, Math.min(320, playerX));
-        });
+            e.preventDefault();
+        }, {passive: false});
 
         function saveScreenshot() {
             const link = document.createElement('a');
