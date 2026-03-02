@@ -1,39 +1,44 @@
-<div id="game-over" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 rounded-[2rem] p-6 text-center">
-    <div id="rank-badge" class="text-6xl font-black mb-2 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">S</div>
-    <h2 id="rank-title" class="text-xs font-bold uppercase tracking-[0.3em] text-zinc-500 mb-8">Island Legend</h2>
-    
-    <p id="final-score" class="text-5xl font-black italic mb-1">0</p>
-    <p class="text-[10px] uppercase tracking-widest text-zinc-500 mb-10">Final Score</p>
-    
-    <div class="grid grid-cols-2 gap-3 w-full">
-        <button onclick="startGame()" class="bg-white text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Try Again</button>
-        <button onclick="shareScore()" class="bg-cyan-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Broadcast</button>
-    </div>
-</div>
-
-<script>
-    function endGame() {
-        gameActive = false;
-        const finalScore = score;
-        const badge = document.getElementById('rank-badge');
-        const title = document.getElementById('rank-title');
-        
-        // Logic to determine "Global Rank" without a database
-        if (finalScore > 100) { badge.innerText = "S"; title.innerText = "Island Legend"; badge.style.color = "#fbbf24"; }
-        else if (finalScore > 50) { badge.innerText = "A"; title.innerText = "Beach Pro"; badge.style.color = "#a78bfa"; }
-        else if (finalScore > 20) { badge.innerText = "B"; title.innerText = "Sand Trotter"; badge.style.color = "#22d3ee"; }
-        else { badge.innerText = "C"; title.innerText = "Island Puppy"; badge.style.color = "#94a3b8"; }
-
-        document.getElementById('final-score').innerText = finalScore;
-        document.getElementById('game-over').classList.remove('hidden');
+// --- HAPTIC FEEDBACK ENGINE ---
+function vibrateCatch() {
+    if ("vibrate" in navigator) {
+        // A short 40ms pulse for a snappy "catch" feeling
+        navigator.vibrate(40);
     }
+}
 
-    function shareScore() {
-        const id = document.getElementById('tokenId').value;
-        const rank = document.getElementById('rank-badge').innerText;
-        // This creates the "Social Leaderboard"
-        const tweetText = `I just achieved RANK ${rank} with my Potcake #${id} in Potcake Paradise! 🏝️🐾\n\nScore: ${score}\n\nCan you beat me on ApeChain?`;
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(window.location.href)}`;
-        window.open(twitterUrl, '_blank');
+function vibrateFail() {
+    if ("vibrate" in navigator) {
+        // A long 300ms vibration for game over
+        navigator.vibrate(300);
     }
-</script>
+}
+
+// Update your gameLoop collision logic:
+if (item.y > 300 && item.y < 380 && item.x > playerX && item.x < playerX + playerWidth) {
+    items.splice(index, 1);
+    score++;
+    
+    // Play Sound
+    catchSfx.currentTime = 0;
+    catchSfx.play().catch(e => {}); 
+    
+    // NEW: Vibrate on catch
+    vibrateCatch();
+    
+    document.getElementById('score-display').innerText = "Score: " + score;
+}
+
+// Update your endGame function:
+function endGame() {
+    gameActive = false;
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    
+    if(!isMuted) failSfx.play().catch(e => {});
+    
+    // NEW: Heavy vibration on fail
+    vibrateFail();
+
+    document.getElementById('game-over-screen').style.display = 'flex';
+    document.getElementById('final-score').innerText = score;
+}
