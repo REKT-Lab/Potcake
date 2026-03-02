@@ -29,16 +29,20 @@
         .gold-text { color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .btn-wood { background: #5d4037; border-bottom: 4px solid #3e2723; transition: all 0.1s; color: #ffe0b2; }
         .btn-wood:active { transform: translateY(2px); border-bottom-width: 2px; }
-        .btn-island { background: #2e7d32; border-bottom: 4px solid #1b5e20; color: #e8f5e9; }
-        .btn-sea { background: #0277bd; border-bottom: 4px solid #01579b; color: #e1f5fe; }
         
-        /* Shake Animation */
         .shake { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
             20%, 80% { transform: translate3d(2.5px, 0, 0); }
             30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
             40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .danger-pulse { animation: danger 1.5s infinite; }
+        @keyframes danger {
+            0% { box-shadow: 0 0 0px red; }
+            50% { box-shadow: 0 0 20px red; }
+            100% { box-shadow: 0 0 0px red; }
         }
         
         .loader { width: 30px; height: 30px; border: 4px solid #fbbf24; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
@@ -48,18 +52,16 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
 
-    <div id="countdown-box">
-        <h1 id="count-num" class="text-9xl font-black italic gold-text">3</h1>
-    </div>
+    <div id="countdown-box"><h1 id="count-num" class="text-9xl font-black italic gold-text">3</h1></div>
 
     <div id="instruction-overlay">
         <div class="wood-panel p-8 max-w-xs text-center">
             <h2 class="text-3xl font-black gold-text mb-4 italic">ISLAND RULES</h2>
             <div class="space-y-3 text-orange-100 text-sm mb-6 font-sans text-left">
-                <p>❤️ Start with **2 Lives**. Don't miss!</p>
-                <p>✨ **Big Bones** = +3 Points Surge!</p>
-                <p>🐶 Catch the **Potcake** for +1 Life.</p>
-                <p>🌅 Survive to see the sunset!</p>
+                <p>❤️ Start with **2 Lives**.</p>
+                <p>✨ **Big Bones** = +3 Points & Heavy Shake!</p>
+                <p>🐶 Catch the **Potcake** for +1 Life (Max 3).</p>
+                <p>🚀 Share your score to grow the pack!</p>
             </div>
             <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs tracking-widest">Enter Paradise</button>
         </div>
@@ -71,23 +73,23 @@
 
     <div id="score-bar" class="w-full max-w-sm wood-panel py-3 px-6 mb-3 flex justify-between items-center z-20">
         <div class="flex flex-col">
-            <span class="text-[9px] uppercase tracking-widest text-orange-200/50 font-bold">Score</span>
-            <span id="score-display" class="text-2xl font-black italic text-white leading-none">0</span>
+            <span class="text-[9px] uppercase font-bold text-orange-200/50">Score</span>
+            <span id="score-display" class="text-2xl font-black italic text-white">0</span>
         </div>
         <div id="life-display" class="text-xl">❤️❤️</div>
         <div class="flex flex-col items-end">
-            <span class="text-[9px] uppercase tracking-widest text-orange-200/50 font-bold">Best</span>
-            <span id="high-score-display" class="text-2xl font-black italic gold-text leading-none">0</span>
+            <span class="text-[9px] uppercase font-bold text-orange-200/50">Best</span>
+            <span id="high-score-display" class="text-2xl font-black italic gold-text">0</span>
         </div>
     </div>
 
     <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-4 z-10">
         <div id="load-box" class="flex flex-col gap-3">
-            <div class="flex gap-2 w-full">
-                <input id="tokenId" type="number" placeholder="Enter ID (e.g. 50)" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
+            <div class="flex gap-2">
+                <input id="tokenId" type="number" placeholder="Enter ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
                 <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs">LOAD</button>
             </div>
-            <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest">Start Game</button>
+            <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase">Start Game</button>
         </div>
         <div id="loading-state" class="hidden flex items-center justify-center gap-4 py-2">
             <span class="loader"></span>
@@ -97,18 +99,12 @@
 
     <div class="w-full max-w-sm relative">
         <canvas id="gameCanvas" width="400" height="400"></canvas>
-        
-        <div id="status-text" class="grid grid-cols-2 gap-3 mt-6">
-            <a href="https://potcakerescue.com" target="_blank" class="btn-wood btn-island py-3 rounded-xl text-center font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">🏝️ Website</a>
-            <a href="https://opensea.io/collection/potcake-rescue" target="_blank" class="btn-wood btn-sea py-3 rounded-xl text-center font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">🌊 OpenSea</a>
-        </div>
-        
         <div id="game-over-screen">
-            <div id="go-wood" class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
-                <p class="text-[10px] font-bold gold-text uppercase tracking-widest mb-1">Total Bones</p>
+            <div class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
+                <p class="text-[10px] font-bold gold-text uppercase mb-1">Total Bones</p>
                 <p id="final-score" class="text-7xl font-black mb-8 italic text-white">0</p>
-                <div id="game-over-btns" class="flex flex-col gap-3 w-full">
-                    <button onclick="startGame()" class="btn-wood py-4 rounded-xl font-black text-xs uppercase tracking-widest">Retry</button>
+                <div class="flex flex-col gap-3 w-full">
+                    <button onclick="startGame()" class="btn-wood py-4 rounded-xl font-black text-xs uppercase">Retry</button>
                     <div class="grid grid-cols-2 gap-2">
                         <button onclick="shareScore()" class="bg-sky-900 text-white py-3 rounded-xl font-black text-[9px] uppercase">X Post 🚀</button>
                         <button onclick="saveScreenshot()" class="bg-emerald-800 text-white py-3 rounded-xl font-black text-[9px] uppercase">Save 📸</button>
@@ -121,8 +117,8 @@
     <script>
         const ADDR = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
         const RPC = "https://rpc.apechain.com/http";
-        const OS_LINK = "https://opensea.io/collection/potcake-rescue";
-        
+        const GAME_LINK = "https://rekt-lab.github.io/Potcake/";
+
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         
@@ -130,10 +126,14 @@
         let backgroundImg = new Image();
         backgroundImg.crossOrigin = "anonymous";
         backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
+
+        // Pre-set potcake image properties
+        potcakeImg.crossOrigin = "anonymous";
         potcakeImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
 
         const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
         const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
+        const megaSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
         const failSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3');
         bgMusic.loop = true;
 
@@ -150,6 +150,8 @@
 
         function updateLifeUI() {
             document.getElementById('life-display').innerText = "❤️".repeat(lives);
+            if (lives === 1) canvas.classList.add('danger-pulse');
+            else canvas.classList.remove('danger-pulse');
         }
 
         async function fetchPotcake() {
@@ -162,13 +164,13 @@
                 const provider = new ethers.JsonRpcProvider(RPC);
                 const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
                 const uri = await contract.tokenURI(parseInt(idInput));
-                const httpUri = uri.replace("ipfs://", "https://ipfs.io/ipfs/");
-                const response = await fetch(httpUri);
-                const meta = await response.json();
-                const imageUri = meta.image.replace("ipfs://", "https://ipfs.io/ipfs/");
                 
-                potcakeImg = new Image();
-                potcakeImg.crossOrigin = "anonymous";
+                // Use Cloudflare for more reliable loading
+                const httpUri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                const meta = await (await fetch(httpUri)).json();
+                const imageUri = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                
+                // Update existing image object to maintain CORS
                 potcakeImg.src = imageUri;
                 potcakeImg.onload = () => {
                     document.getElementById('loading-state').classList.add('hidden');
@@ -176,7 +178,7 @@
                     document.getElementById('start-btn').classList.remove('hidden');
                 };
             } catch(e) {
-                alert("NFT Load Error. Falling back to default!");
+                console.error("NFT Error:", e);
                 document.getElementById('loading-state').classList.add('hidden');
                 document.getElementById('load-box').classList.remove('hidden');
                 document.getElementById('start-btn').classList.remove('hidden');
@@ -188,18 +190,15 @@
             score = 0; lives = 2; items = []; gameSpeed = 3.5; playerX = 160;
             updateLifeUI();
             document.getElementById('score-display').innerText = "0";
-            
             let count = 3;
-            const cBox = document.getElementById('countdown-box');
-            const cNum = document.getElementById('count-num');
-            cBox.style.display = 'flex';
-            cNum.innerText = count;
-            
+            document.getElementById('countdown-box').style.display = 'flex';
             const timer = setInterval(() => {
                 count--;
-                if(count > 0) { cNum.innerText = count; } else {
-                    clearInterval(timer); cBox.style.display = 'none';
-                    bgMusic.play().catch(e => {}); gameActive = true; gameLoop();
+                if(count > 0) document.getElementById('count-num').innerText = count;
+                else {
+                    clearInterval(timer);
+                    document.getElementById('countdown-box').style.display = 'none';
+                    bgMusic.play().catch(()=>{}); gameActive = true; gameLoop();
                 }
             }, 800);
         }
@@ -209,10 +208,8 @@
             ctx.clearRect(0, 0, 400, 400);
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
             
-            if(score > 15) {
-                ctx.fillStyle = "rgba(255, 100, 0, 0.15)";
-                ctx.fillRect(0,0,400,400);
-            }
+            if(score > 15) { ctx.fillStyle = "rgba(255, 100, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
+            if(lives === 1) { ctx.fillStyle = "rgba(255, 0, 0, 0.1)"; ctx.fillRect(0,0,400,400); }
 
             ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
 
@@ -226,62 +223,47 @@
 
             items.forEach((item, index) => {
                 item.y += item.speed;
-                ctx.font = item.type === "mega" ? "50px serif" : "30px serif";
-                let icon = item.type === "life" ? "🐶" : "🦴";
-                ctx.fillText(icon, item.x, item.y);
+                ctx.font = item.type === "mega" ? "55px serif" : "30px serif";
+                ctx.fillText(item.type === "life" ? "🐶" : "🦴", item.x, item.y);
 
                 if (item.y > 300 && item.y < 380 && item.x > playerX - 15 && item.x < playerX + playerWidth + 5) {
-                    if (item.type === "mega") { score += 3; triggerShake(); }
-                    else if (item.type === "life") { if(lives < 3) lives++; updateLifeUI(); }
-                    else score++;
-                    
+                    if (item.type === "mega") { score += 3; triggerShake(); megaSfx.play().catch(()=>{}); }
+                    else if (item.type === "life") { if(lives < 3) lives++; updateLifeUI(); catchSfx.play().catch(()=>{}); }
+                    else { score++; catchSfx.play().catch(()=>{}); }
                     items.splice(index, 1);
-                    catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
                     document.getElementById('score-display').innerText = score;
                 }
-
                 if (item.y > 410) {
                     items.splice(index, 1);
-                    if (item.type !== "life") {
-                        lives--;
-                        updateLifeUI();
-                        triggerShake();
-                        if (lives <= 0) endGame();
-                    }
+                    if (item.type !== "life") { lives--; updateLifeUI(); triggerShake(); if (lives <= 0) endGame(); }
                 }
             });
             requestAnimationFrame(gameLoop);
         }
 
         function endGame() {
-            gameActive = false; bgMusic.pause(); failSfx.play().catch(e => {});
-            if (score > highScore) { 
-                highScore = score; localStorage.setItem('potcakeBest', highScore); 
-                document.getElementById('high-score-display').innerText = highScore; 
-            }
+            gameActive = false; bgMusic.pause(); failSfx.play().catch(()=>{});
+            if (score > highScore) { highScore = score; localStorage.setItem('potcakeBest', highScore); }
             document.getElementById('game-over-screen').style.display = 'flex';
             document.getElementById('final-score').innerText = score;
         }
 
         canvas.addEventListener('touchmove', (e) => {
             const rect = canvas.getBoundingClientRect();
-            const x = e.touches[0].clientX - rect.left;
-            playerX = (x / rect.width * 400) - playerWidth / 2;
+            playerX = ((e.touches[0].clientX - rect.left) / rect.width * 400) - playerWidth / 2;
             playerX = Math.max(0, Math.min(320, playerX));
         });
 
         function saveScreenshot() {
             const link = document.createElement('a');
-            link.download = `potcake_score_${score}.png`;
+            link.download = `potcake_${score}.png`;
             link.href = canvas.toDataURL();
             link.click();
         }
 
         function shareScore() {
-            // MEGA TWEET CONFIG
-            const tweetText = `I survived the night in Potcake Paradise with ${score} bones! 🦴✨🏝️\n\nCheck out the collection and help the rescue: \n${OS_LINK}\n\n@potcakenft #ApeChain #PotcakeRescue`;
-            const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-            window.open(xUrl, '_blank');
+            const text = `I just caught ${score} bones in Potcake Paradise! 🦴🏝️\n\nPlay the game here: \n${GAME_LINK}\n\n@potcakenft #ApeChain #PotcakeRescue`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
         }
     </script>
 </body>
