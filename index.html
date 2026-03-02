@@ -1,120 +1,168 @@
-// --- CONFIGURATION ---
-const ADDR = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
-const RPC = "https://rpc.apechain.com/http";
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Potcake Paradise</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: white; font-family: sans-serif; overflow: hidden; touch-action: none; margin: 0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        #gameCanvas { width: 100%; max-width: 400px; border-radius: 2.5rem; background: #111; display: block; margin: 0 auto; }
+        #game-over-screen { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; flex-direction: column; backdrop-blur: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
 
-let potcakeImg = new Image();
-let backgroundImg = new Image();
-backgroundImg.crossOrigin = "anonymous";
-backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
+    <div class="my-6 text-center">
+        <h1 class="text-2xl font-black italic tracking-tighter text-cyan-500">POTCAKE PARADISE</h1>
+        <div class="flex justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">
+            <p>Score: <span id="score-display" class="text-white">0</span></p>
+            <button onclick="toggleMute()" id="mute-btn" class="text-cyan-500 underline">Mute</button>
+        </div>
+    </div>
 
-// Audio
-const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-const failSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3');
-bgMusic.loop = true;
-let isMuted = false;
+    <div class="w-full max-w-sm glass rounded-[2rem] p-4 mb-4 z-10">
+        <div class="flex gap-2">
+            <input id="tokenId" type="number" placeholder="Potcake ID" class="bg-white/5 flex-1 px-4 py-3 rounded-xl border border-white/10 focus:outline-none text-white">
+            <button onclick="fetchPotcake()" class="bg-white text-black px-6 py-3 rounded-xl font-black text-xs">LOAD</button>
+            <button id="start-btn" onclick="startGame()" class="hidden bg-cyan-500 text-black px-6 py-3 rounded-xl font-black text-xs">PLAY</button>
+        </div>
+    </div>
 
-let gameActive = false, score = 0, playerX = 160, playerWidth = 80, items = [];
-let gameSpeed = 3; // Starting fall speed
-
-function toggleMute() {
-    isMuted = !isMuted;
-    bgMusic.muted = isMuted; catchSfx.muted = isMuted; failSfx.muted = isMuted;
-    document.getElementById('mute-btn').innerText = isMuted ? "Unmute" : "Mute";
-}
-
-async function fetchPotcake() {
-    const idInput = document.getElementById('tokenId').value;
-    if(!idInput) return;
-    const id = parseInt(idInput) - 1;
-    document.getElementById('status').innerText = "Fetching from ApeChain...";
-    
-    try {
-        const provider = new ethers.JsonRpcProvider(RPC);
-        const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
-        const uri = await contract.tokenURI(id);
-        const meta = await (await fetch(uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"))).json();
+    <div class="w-full max-w-sm relative">
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div id="status" class="text-center mt-4 text-[10px] text-zinc-600 uppercase tracking-widest font-bold italic">ApeChain Connectivity: Active</div>
         
-        potcakeImg = new Image();
-        potcakeImg.crossOrigin = "anonymous";
-        potcakeImg.src = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
-        potcakeImg.onload = () => {
-            ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            ctx.drawImage(potcakeImg, 160, 280, 80, 80);
-            document.getElementById('start-btn').classList.remove('hidden');
-            document.getElementById('status').innerText = "Utility Unlocked: Ready to Play";
-        };
-    } catch(e) { document.getElementById('status').innerText = "Error Loading NFT"; }
-}
+        <div id="game-over-screen">
+            <div id="rank-badge" class="text-8xl font-black mb-2 text-yellow-400 italic">S</div>
+            <h2 id="rank-title" class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-6">Island Legend</h2>
+            <p id="final-score" class="text-6xl font-black mb-10 italic">0</p>
+            <div class="flex gap-4">
+                <button onclick="startGame()" class="bg-white text-black px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest">Retry</button>
+                <button onclick="shareScore()" class="bg-zinc-800 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest">Share X</button>
+            </div>
+        </div>
+    </div>
 
-function startGame() {
-    document.getElementById('game-over-screen').style.display = 'none';
-    if(!isMuted) bgMusic.play().catch(e => {});
-    gameActive = true; score = 0; items = []; gameSpeed = 3;
-    document.getElementById('score-display').innerText = "0";
-    gameLoop();
-}
-
-function gameLoop() {
-    if (!gameActive) return;
-    ctx.clearRect(0, 0, 400, 400);
-    ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-    ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
-
-    // Speed increases slightly with every catch
-    let currentDifficulty = 0.03 + (score * 0.002);
-    if (Math.random() < currentDifficulty) {
-        items.push({ 
-            x: Math.random() * 350, 
-            y: -20, 
-            speed: gameSpeed + (Math.random() * 2) 
-        });
-    }
-
-    items.forEach((item, index) => {
-        item.y += item.speed;
+    <script>
+        const ADDR = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
+        const RPC = "https://rpc.apechain.com/http";
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
         
-        // DRAW BONE 🦴
-        ctx.font = "30px serif";
-        ctx.textAlign = "center";
-        ctx.fillText("🦴", item.x, item.y);
+        let potcakeImg = new Image();
+        let backgroundImg = new Image();
+        backgroundImg.crossOrigin = "anonymous";
+        backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
 
-        if (item.y > 300 && item.y < 380 && item.x > playerX - 10 && item.x < playerX + playerWidth + 10) {
-            items.splice(index, 1);
-            score++;
-            gameSpeed += 0.1; // Speed up the whole game!
-            catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
-            if ("vibrate" in navigator) navigator.vibrate(40);
-            document.getElementById('score-display').innerText = score;
+        const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+        const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
+        const failSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3');
+        bgMusic.loop = true;
+        let isMuted = false;
+
+        let gameActive = false, score = 0, playerX = 160, playerWidth = 80, items = [];
+        let gameSpeed = 3;
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            bgMusic.muted = isMuted; catchSfx.muted = isMuted; failSfx.muted = isMuted;
+            document.getElementById('mute-btn').innerText = isMuted ? "Unmute" : "Mute";
         }
-        if (item.y > 400) endGame();
-    });
-    requestAnimationFrame(gameLoop);
-}
 
-function endGame() {
-    gameActive = false;
-    bgMusic.pause(); bgMusic.currentTime = 0;
-    if(!isMuted) failSfx.play().catch(e => {});
-    if ("vibrate" in navigator) navigator.vibrate(200);
-    
-    document.getElementById('game-over-screen').style.display = 'flex';
-    document.getElementById('final-score').innerText = score;
-    const b = document.getElementById('rank-badge');
-    if (score > 40) b.innerText = "S"; else if (score > 15) b.innerText = "A"; else b.innerText = "B";
-}
+        async function fetchPotcake() {
+            const idInput = document.getElementById('tokenId').value;
+            if(!idInput) return;
+            const id = parseInt(idInput) - 1;
+            document.getElementById('status').innerText = "Syncing Metadata...";
+            
+            try {
+                const provider = new ethers.JsonRpcProvider(RPC);
+                const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
+                const uri = await contract.tokenURI(id);
+                const meta = await (await fetch(uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/"))).json();
+                
+                potcakeImg = new Image();
+                potcakeImg.crossOrigin = "anonymous";
+                potcakeImg.src = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                potcakeImg.onload = () => {
+                    ctx.drawImage(backgroundImg, 0, 0, 400, 400);
+                    ctx.drawImage(potcakeImg, 160, 280, 80, 80);
+                    document.getElementById('start-btn').classList.remove('hidden');
+                    document.getElementById('status').innerText = "Potcake Sync Complete";
+                };
+            } catch(e) { document.getElementById('status').innerText = "NFT Load Error"; }
+        }
 
-canvas.addEventListener('touchmove', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    playerX = (x / rect.width * 400) - 40;
-    if (playerX < 0) playerX = 0; if (playerX > 320) playerX = 320;
-});
+        function startGame() {
+            document.getElementById('game-over-screen').style.display = 'none';
+            if(!isMuted) bgMusic.play().catch(e => {});
+            gameActive = true; score = 0; items = []; gameSpeed = 3.5;
+            document.getElementById('score-display').innerText = "0";
+            gameLoop();
+        }
 
-function shareScore() {
-    const currentUrl = window.location.href;
-    const text = `I just hit rank ${document.getElementById('rank-badge').innerText} in Potcake Paradise! 🏝️🦴\n\nPlay here:`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`);
-}
+        function gameLoop() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, 400, 400);
+            ctx.drawImage(backgroundImg, 0, 0, 400, 400);
+            ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
+
+            if (Math.random() < 0.03 + (score * 0.001)) {
+                items.push({ x: Math.random() * 350, y: -20, speed: gameSpeed + (Math.random() * 2), rot: 0 });
+            }
+
+            items.forEach((item, index) => {
+                item.y += item.speed;
+                item.rot += 0.1; // Make the bone tumble
+                
+                ctx.save();
+                ctx.translate(item.x, item.y);
+                ctx.rotate(item.rot);
+                ctx.font = "35px serif";
+                ctx.textAlign = "center";
+                ctx.fillText("🦴", 0, 0);
+                ctx.restore();
+
+                if (item.y > 300 && item.y < 380 && item.x > playerX - 10 && item.x < playerX + playerWidth + 10) {
+                    items.splice(index, 1);
+                    score++;
+                    gameSpeed += 0.12; // Ramp up difficulty!
+                    catchSfx.currentTime = 0; catchSfx.play().catch(e => {});
+                    if ("vibrate" in navigator) navigator.vibrate(40);
+                    document.getElementById('score-display').innerText = score;
+                }
+                if (item.y > 400) endGame();
+            });
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameActive = false;
+            bgMusic.pause(); bgMusic.currentTime = 0;
+            if(!isMuted) failSfx.play().catch(e => {});
+            if ("vibrate" in navigator) navigator.vibrate(200);
+            
+            document.getElementById('game-over-screen').style.display = 'flex';
+            document.getElementById('final-score').innerText = score;
+            const b = document.getElementById('rank-badge');
+            if (score > 40) b.innerText = "S"; else if (score > 15) b.innerText = "A"; else b.innerText = "B";
+        }
+
+        canvas.addEventListener('touchmove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            playerX = (x / rect.width * 400) - 40;
+            if (playerX < 0) playerX = 0; if (playerX > 320) playerX = 320;
+        });
+
+        function shareScore() {
+            const currentUrl = window.location.href;
+            const text = `I just hit rank ${document.getElementById('rank-badge').innerText} in Potcake Paradise! 🏝️🦴\n\nScore: ${score}\n\nCan you beat me @potcakenft?\n\nPlay here:`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`);
+        }
+    </script>
+</body>
+</html>
