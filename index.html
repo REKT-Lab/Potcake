@@ -14,43 +14,25 @@
             box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8);
             border-radius: 1.5rem; position: relative;
         }
-        .wood-panel::after {
-            content: ""; position: absolute; inset: 0;
-            background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-            opacity: 0.15; pointer-events: none; border-radius: 1.2rem;
-        }
-        #gameCanvas { width: 100%; max-width: 400px; border-radius: 2rem; border: 6px solid #2a1d15; background: #111; display: block; margin: 0 auto; transition: transform 0.1s; }
-        #game-over-screen, #instruction-overlay { 
+        #gameCanvas { width: 100%; max-width: 400px; border-radius: 2rem; border: 6px solid #2a1d15; background: #111; display: block; margin: 0 auto; }
+        #game-over-screen { 
             display: none; position: fixed; inset: 0; z-index: 100; 
             background: rgba(10, 5, 0, 0.94); align-items: center; justify-content: center; 
             flex-direction: column; backdrop-filter: blur(10px); 
         }
-        #instruction-overlay { display: flex; }
         .gold-text { color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .btn-wood { background: #5d4037; border-bottom: 4px solid #3e2723; transition: all 0.1s; color: #ffe0b2; }
-        .btn-wood:active { transform: translateY(2px); border-bottom-width: 2px; }
-        .danger-pulse { animation: danger 1.5s infinite; }
-        @keyframes danger { 0%, 100% { box-shadow: 0 0 0px red; } 50% { box-shadow: 0 0 20px red; } }
         .loader { width: 30px; height: 30px; border: 4px solid #fbbf24; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #countdown-box { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(6px); flex-direction: column; }
+        
+        #nft-preview-container { width: 100px; height: 100px; border: 2px dashed #5d4037; border-radius: 12px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
+        #nft-preview-container.loaded { border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+        #preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        #trait-list { display: flex; gap: 6px; overflow-x: auto; padding: 4px; width: 100%; max-width: 320px; scrollbar-width: none; }
+        .trait-badge { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-size: 10px; white-space: nowrap; font-weight: bold; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4">
-
-    <div id="countdown-box"><h1 id="count-num" class="text-9xl font-black italic gold-text">3</h1></div>
-
-    <div id="instruction-overlay">
-        <div class="wood-panel p-8 max-w-xs text-center">
-            <h2 class="text-3xl font-black gold-text mb-4 italic">ISLAND RULES</h2>
-            <div class="space-y-3 text-orange-100 text-sm mb-6 text-left">
-                <p>❤️ Start with **2 Lives**.</p>
-                <p>✨ **Big Bones** = +3 Points!</p>
-                <p>🐶 Catch **Potcakes** for +1 Life.</p>
-            </div>
-            <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs">Enter Paradise</button>
-        </div>
-    </div>
 
     <div class="mt-2 mb-2 text-center">
         <h1 class="text-3xl font-black italic gold-text">POTCAKE PARADISE</h1>
@@ -59,26 +41,33 @@
     <div id="score-bar" class="w-full max-w-sm wood-panel py-3 px-6 mb-3 flex justify-between items-center z-20">
         <div class="flex flex-col">
             <span class="text-[9px] uppercase font-bold text-orange-200/50">Score</span>
-            <span id="score-display" class="text-2xl font-black italic text-white leading-none">0</span>
+            <span id="score-display" class="text-2xl font-black italic text-white">0</span>
         </div>
         <div id="life-display" class="text-xl">❤️❤️</div>
         <div class="flex flex-col items-end">
             <span class="text-[9px] uppercase font-bold text-orange-200/50">Best</span>
-            <span id="high-score-display" class="text-2xl font-black italic gold-text leading-none">0</span>
+            <span id="high-score-display" class="text-2xl font-black italic gold-text">0</span>
         </div>
     </div>
 
-    <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-4 z-10">
-        <div id="load-box" class="flex flex-col gap-3">
+    <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-4 z-10 flex flex-col items-center">
+        <div id="nft-preview-container">
+            <span id="preview-placeholder" class="text-[10px] text-orange-200/40 font-bold">NO NFT</span>
+            <img id="preview-img" alt="Potcake">
+        </div>
+        <div id="trait-list" class="mt-2 mb-3"></div>
+
+        <div id="load-box" class="flex flex-col gap-3 w-full">
             <div class="flex gap-2">
                 <input id="tokenId" type="number" placeholder="Enter ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
-                <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs">LOAD</button>
+                <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs uppercase">Sync</button>
             </div>
             <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase">Start Game</button>
         </div>
+        
         <div id="loading-state" class="hidden flex flex-col items-center justify-center gap-2 py-2">
             <span class="loader"></span>
-            <p class="text-[10px] font-bold gold-text uppercase">Syncing NFT...</p>
+            <button onclick="finalizeLoading()" class="text-[10px] font-bold text-white underline uppercase">Skip to Play</button>
         </div>
     </div>
 
@@ -86,95 +75,73 @@
         <canvas id="gameCanvas" width="400" height="400"></canvas>
         <div id="game-over-screen">
             <div class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
-                <p class="text-[10px] font-bold gold-text uppercase mb-1">Total Bones</p>
                 <p id="final-score" class="text-7xl font-black mb-8 italic text-white">0</p>
-                <div class="flex flex-col gap-3 w-full">
-                    <button onclick="startGame()" class="btn-wood py-4 rounded-xl font-black text-xs uppercase">Retry</button>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="shareScore()" class="bg-sky-900 text-white py-3 rounded-xl font-black text-[9px] uppercase">X Post 🚀</button>
-                        <button onclick="saveScreenshot()" class="bg-emerald-800 text-white py-3 rounded-xl font-black text-[9px] uppercase">Save 📸</button>
-                    </div>
-                </div>
+                <button onclick="startGame()" class="btn-wood w-full py-4 rounded-xl font-black text-xs uppercase mb-3">Retry</button>
+                <button onclick="shareScore()" class="bg-sky-900 text-white w-full py-3 rounded-xl font-black text-[9px] uppercase">X Post 🚀</button>
             </div>
         </div>
     </div>
 
     <script>
         const ADDR = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
-        // New Reliable RPC
         const RPC = "https://apechain.calderachain.xyz/http";
         const GAME_LINK = "https://rekt-lab.github.io/Potcake/";
 
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
         let potcakeImg = new Image();
         let backgroundImg = new Image();
         backgroundImg.crossOrigin = "anonymous";
         backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
 
-        const defaultDog = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
-        potcakeImg.crossOrigin = "anonymous";
-        potcakeImg.src = defaultDog;
+        let megaBoneColor = "#fbbf24"; // Default Gold
+        potcakeImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
 
-        const bgMusic = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-        const catchSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
-        const megaSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
-        const failSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/253/253-preview.mp3');
-        bgMusic.loop = true;
-
-        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 80, items = [], gameSpeed = 3.5;
+        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 80, items = [];
         let highScore = localStorage.getItem('potcakeBest') || 0;
         document.getElementById('high-score-display').innerText = highScore;
 
-        function hideInstructions() { document.getElementById('instruction-overlay').style.display = 'none'; }
-        
-        function triggerShake() {
-            canvas.classList.add('shake');
-            setTimeout(() => canvas.classList.remove('shake'), 200);
-        }
-
-        function updateLifeUI() {
-            document.getElementById('life-display').innerText = "❤️".repeat(lives);
-            if (lives === 1) canvas.classList.add('danger-pulse');
-            else canvas.classList.remove('danger-pulse');
-        }
-
         async function fetchPotcake() {
-            const idInput = document.getElementById('tokenId').value;
-            if(!idInput) return;
+            const id = document.getElementById('tokenId').value;
+            if(!id) return;
             document.getElementById('load-box').classList.add('hidden');
             document.getElementById('loading-state').classList.remove('hidden');
-
-            const timeout = setTimeout(() => { finalizeLoading(); }, 6000);
+            const traitContainer = document.getElementById('trait-list');
+            traitContainer.innerHTML = "";
 
             try {
                 const provider = new ethers.JsonRpcProvider(RPC);
                 const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
-                const uri = await contract.tokenURI(BigInt(idInput));
+                const uri = await contract.tokenURI(BigInt(id));
+                const meta = await fetch(uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/")).then(res => res.json());
                 
-                // Try multiple gateways if one hangs
-                const gateways = ["https://cloudflare-ipfs.com/ipfs/", "https://ipfs.io/ipfs/", "https://gateway.pinata.cloud/ipfs/"];
-                let metadata = null;
-
-                for (let gw of gateways) {
-                    try {
-                        const response = await fetch(uri.replace("ipfs://", gw));
-                        if (response.ok) { metadata = await response.json(); break; }
-                    } catch(e) {}
-                }
-
-                if (metadata && metadata.image) {
-                    const imgUrl = metadata.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                const imgUrl = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                const tempImg = new Image();
+                tempImg.crossOrigin = "anonymous";
+                tempImg.src = imgUrl;
+                tempImg.onload = () => {
                     potcakeImg.src = imgUrl;
-                    potcakeImg.onload = () => { clearTimeout(timeout); finalizeLoading(); };
-                } else {
+                    document.getElementById('preview-placeholder').style.display = 'none';
+                    const pImg = document.getElementById('preview-img');
+                    pImg.src = imgUrl; pImg.style.display = 'block';
+                    document.getElementById('nft-preview-container').classList.add('loaded');
+                    
+                    if(meta.attributes) {
+                        meta.attributes.forEach(attr => {
+                            const badge = document.createElement('div');
+                            badge.className = 'trait-badge';
+                            badge.innerText = `${attr.trait_type}: ${attr.value}`;
+                            traitContainer.appendChild(badge);
+                            
+                            // SYNC MEGA BONE COLOR TO BACKGROUND TRAIT
+                            if(attr.trait_type.toLowerCase() === "background") {
+                                megaBoneColor = attr.value.toLowerCase();
+                            }
+                        });
+                    }
                     finalizeLoading();
-                }
-            } catch(e) {
-                console.error("NFT Fetch error:", e);
-                finalizeLoading();
-            }
+                };
+            } catch(e) { finalizeLoading(); }
         }
 
         function finalizeLoading() {
@@ -185,72 +152,55 @@
 
         function startGame() {
             document.getElementById('game-over-screen').style.display = 'none';
-            score = 0; lives = 2; items = []; gameSpeed = 3.5; playerX = 160;
-            updateLifeUI();
+            score = 0; lives = 2; items = []; playerX = 160;
             document.getElementById('score-display').innerText = "0";
-            let count = 3;
-            document.getElementById('countdown-box').style.display = 'flex';
-            document.getElementById('count-num').innerText = count;
-            
-            const timer = setInterval(() => {
-                count--;
-                if(count > 0) document.getElementById('count-num').innerText = count;
-                else {
-                    clearInterval(timer);
-                    document.getElementById('countdown-box').style.display = 'none';
-                    bgMusic.play().catch(()=>{}); gameActive = true; gameLoop();
-                }
-            }, 800);
+            document.getElementById('life-display').innerText = "❤️❤️";
+            gameActive = true; gameLoop();
         }
 
         function gameLoop() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, 400, 400);
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            
-            if(score > 15) { ctx.fillStyle = "rgba(255, 100, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
-            if(lives === 1) { ctx.fillStyle = "rgba(255, 0, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
+            ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
 
-            if (score >= 50) {
-                ctx.save();
-                ctx.shadowBlur = 30; ctx.shadowColor = "gold";
-                ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
-                ctx.restore();
-            } else {
-                ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
-            }
-
-            if (Math.random() < 0.03 + (score * 0.001)) {
-                let type = "normal";
-                let r = Math.random();
-                if (r < 0.04) type = "life";
-                else if (r < 0.14) type = "mega";
-                items.push({ x: Math.random() * 350, y: -20, speed: gameSpeed + (Math.random() * 2), type: type });
+            if (Math.random() < 0.04) {
+                let type = Math.random() < 0.1 ? "mega" : "normal";
+                items.push({ x: Math.random() * 350, y: -20, speed: 4 + (score/15), type: type });
             }
 
             items.forEach((item, index) => {
                 item.y += item.speed;
-                ctx.font = item.type === "mega" ? "55px serif" : "30px serif";
-                ctx.fillText(item.type === "life" ? "🐶" : "🦴", item.x, item.y);
+                
+                if(item.type === "mega") {
+                    ctx.save();
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = megaBoneColor;
+                    ctx.font = "50px serif";
+                    ctx.fillText("🦴", item.x, item.y);
+                    ctx.restore();
+                } else {
+                    ctx.font = "30px serif";
+                    ctx.fillText("🦴", item.x, item.y);
+                }
 
-                if (item.y > 300 && item.y < 380 && item.x > playerX - 15 && item.x < playerX + playerWidth + 5) {
-                    if (item.type === "mega") { score += 3; triggerShake(); megaSfx.play().catch(()=>{}); }
-                    else if (item.type === "life") { if(lives < 3) lives++; updateLifeUI(); catchSfx.play().catch(()=>{}); }
-                    else { score++; catchSfx.play().catch(()=>{}); }
+                if (item.y > 300 && item.y < 380 && item.x > playerX - 10 && item.x < playerX + 70) {
+                    score += (item.type === "mega" ? 3 : 1);
                     items.splice(index, 1);
                     document.getElementById('score-display').innerText = score;
                 }
                 if (item.y > 410) {
                     items.splice(index, 1);
-                    if (item.type !== "life") { lives--; updateLifeUI(); triggerShake(); if (lives <= 0) endGame(); }
+                    lives--;
+                    document.getElementById('life-display').innerText = "❤️".repeat(Math.max(0, lives));
+                    if (lives <= 0) endGame();
                 }
             });
             requestAnimationFrame(gameLoop);
         }
 
         function endGame() {
-            gameActive = false; bgMusic.pause(); failSfx.play().catch(()=>{});
-            canvas.classList.remove('danger-pulse');
+            gameActive = false;
             if (score > highScore) { highScore = score; localStorage.setItem('potcakeBest', highScore); }
             document.getElementById('game-over-screen').style.display = 'flex';
             document.getElementById('final-score').innerText = score;
@@ -258,20 +208,13 @@
 
         canvas.addEventListener('touchmove', (e) => {
             const rect = canvas.getBoundingClientRect();
-            playerX = ((e.touches[0].clientX - rect.left) / rect.width * 400) - playerWidth / 2;
+            playerX = ((e.touches[0].clientX - rect.left) / rect.width * 400) - 40;
             playerX = Math.max(0, Math.min(320, playerX));
             e.preventDefault();
         }, {passive: false});
 
-        function saveScreenshot() {
-            const link = document.createElement('a');
-            link.download = `potcake_${score}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-        }
-
         function shareScore() {
-            const text = `I just caught ${score} bones in Potcake Paradise! 🦴🏝️\n\nPlay the game here: \n${GAME_LINK}\n\n@potcakenft #ApeChain #PotcakeRescue`;
+            const text = `I just caught ${score} bones in Potcake Paradise! 🦴🏝️\n\nPlay here: ${GAME_LINK}\n\n@potcakenft #ApeChain`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
         }
     </script>
