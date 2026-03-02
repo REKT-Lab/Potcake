@@ -1,34 +1,39 @@
-<div id="weather-effect" class="absolute inset-0 pointer-events-none z-20"></div>
+<div id="game-over" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/95 rounded-[2rem] p-6 text-center">
+    <div id="rank-badge" class="text-6xl font-black mb-2 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">S</div>
+    <h2 id="rank-title" class="text-xs font-bold uppercase tracking-[0.3em] text-zinc-500 mb-8">Island Legend</h2>
+    
+    <p id="final-score" class="text-5xl font-black italic mb-1">0</p>
+    <p class="text-[10px] uppercase tracking-widest text-zinc-500 mb-10">Final Score</p>
+    
+    <div class="grid grid-cols-2 gap-3 w-full">
+        <button onclick="startGame()" class="bg-white text-black py-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Try Again</button>
+        <button onclick="shareScore()" class="bg-cyan-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all">Broadcast</button>
+    </div>
+</div>
 
 <script>
-// --- THE "NEVER DONE BEFORE" LOGIC: REAL-TIME SYNC ---
-function applyEnvironmentalVibe() {
-    const hour = new Date().getHours();
-    const weatherLayer = document.getElementById('weather-effect');
-    const canvas = document.getElementById('mainCanvas');
-    
-    // 1. NIGHT VIBE (8 PM - 6 AM)
-    if (hour >= 20 || hour < 6) {
-        // Deep blue moonlight overlay
-        weatherLayer.style.background = "linear-gradient(to bottom, rgba(0,20,50,0.4), rgba(0,0,10,0.7))";
-        canvas.style.filter = "brightness(0.7) contrast(1.1) saturate(0.8) sepia(0.2)";
-        document.getElementById('status').innerText = "🌙 Midnight in the Bahamas";
-    } 
-    // 2. GOLDEN HOUR (6 PM - 8 PM or 6 AM - 8 AM)
-    else if ((hour >= 18 && hour < 20) || (hour >= 6 && hour < 8)) {
-        // Warm orange/pink sunset glow
-        weatherLayer.style.background = "linear-gradient(to top, rgba(255,100,0,0.2), transparent)";
-        canvas.style.filter = "brightness(1.1) saturate(1.4) hue-rotate(-10deg)";
-        document.getElementById('status').innerText = "🌅 Golden Hour Vibe";
-    }
-    // 3. HIGH NOON (Normal)
-    else {
-        weatherLayer.style.background = "none";
-        canvas.style.filter = "none";
-        document.getElementById('status').innerText = "☀️ Island Sun Active";
-    }
-}
+    function endGame() {
+        gameActive = false;
+        const finalScore = score;
+        const badge = document.getElementById('rank-badge');
+        const title = document.getElementById('rank-title');
+        
+        // Logic to determine "Global Rank" without a database
+        if (finalScore > 100) { badge.innerText = "S"; title.innerText = "Island Legend"; badge.style.color = "#fbbf24"; }
+        else if (finalScore > 50) { badge.innerText = "A"; title.innerText = "Beach Pro"; badge.style.color = "#a78bfa"; }
+        else if (finalScore > 20) { badge.innerText = "B"; title.innerText = "Sand Trotter"; badge.style.color = "#22d3ee"; }
+        else { badge.innerText = "C"; title.innerText = "Island Puppy"; badge.style.color = "#94a3b8"; }
 
-// Call this inside your render() function to sync the NFT with the real world
-applyEnvironmentalVibe();
+        document.getElementById('final-score').innerText = finalScore;
+        document.getElementById('game-over').classList.remove('hidden');
+    }
+
+    function shareScore() {
+        const id = document.getElementById('tokenId').value;
+        const rank = document.getElementById('rank-badge').innerText;
+        // This creates the "Social Leaderboard"
+        const tweetText = `I just achieved RANK ${rank} with my Potcake #${id} in Potcake Paradise! 🏝️🐾\n\nScore: ${score}\n\nCan you beat me on ApeChain?`;
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(window.location.href)}`;
+        window.open(twitterUrl, '_blank');
+    }
 </script>
