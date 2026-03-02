@@ -29,22 +29,8 @@
         .gold-text { color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .btn-wood { background: #5d4037; border-bottom: 4px solid #3e2723; transition: all 0.1s; color: #ffe0b2; }
         .btn-wood:active { transform: translateY(2px); border-bottom-width: 2px; }
-        
-        .shake { animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both; }
-        @keyframes shake {
-            10%, 90% { transform: translate3d(-1px, 0, 0); }
-            20%, 80% { transform: translate3d(2.5px, 0, 0); }
-            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-            40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-
         .danger-pulse { animation: danger 1.5s infinite; }
-        @keyframes danger {
-            0% { box-shadow: 0 0 0px red; }
-            50% { box-shadow: 0 0 20px red; }
-            100% { box-shadow: 0 0 0px red; }
-        }
-        
+        @keyframes danger { 0%, 100% { box-shadow: 0 0 0px red; } 50% { box-shadow: 0 0 20px red; } }
         .loader { width: 30px; height: 30px; border: 4px solid #fbbf24; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #countdown-box { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); backdrop-filter: blur(6px); flex-direction: column; }
@@ -56,30 +42,29 @@
 
     <div id="instruction-overlay">
         <div class="wood-panel p-8 max-w-xs text-center">
-            <h2 class="text-3xl font-black gold-text mb-4 italic uppercase">Island Rules</h2>
-            <div class="space-y-3 text-orange-100 text-sm mb-6 font-sans text-left">
-                <p>❤️ Start with **2 Lives**. Don't miss!</p>
-                <p>✨ **Big Bones** = +3 Points & Heavy Shake!</p>
-                <p>🐶 Catch the **Potcake** for +1 Life (Max 3).</p>
-                <p>🚀 High Scores unlock the **Golden Shine**!</p>
+            <h2 class="text-3xl font-black gold-text mb-4 italic">ISLAND RULES</h2>
+            <div class="space-y-3 text-orange-100 text-sm mb-6 text-left">
+                <p>❤️ Start with **2 Lives**.</p>
+                <p>✨ **Big Bones** = +3 Points!</p>
+                <p>🐶 Catch **Potcakes** for +1 Life.</p>
             </div>
-            <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs tracking-widest">Enter Paradise</button>
+            <button onclick="hideInstructions()" class="btn-wood w-full py-4 rounded-xl font-black uppercase text-xs">Enter Paradise</button>
         </div>
     </div>
 
-    <div id="main-header" class="mt-2 mb-2 text-center">
-        <h1 class="text-3xl font-black italic tracking-tighter gold-text">POTCAKE PARADISE</h1>
+    <div class="mt-2 mb-2 text-center">
+        <h1 class="text-3xl font-black italic gold-text">POTCAKE PARADISE</h1>
     </div>
 
     <div id="score-bar" class="w-full max-w-sm wood-panel py-3 px-6 mb-3 flex justify-between items-center z-20">
         <div class="flex flex-col">
             <span class="text-[9px] uppercase font-bold text-orange-200/50">Score</span>
-            <span id="score-display" class="text-2xl font-black italic text-white">0</span>
+            <span id="score-display" class="text-2xl font-black italic text-white leading-none">0</span>
         </div>
         <div id="life-display" class="text-xl">❤️❤️</div>
         <div class="flex flex-col items-end">
             <span class="text-[9px] uppercase font-bold text-orange-200/50">Best</span>
-            <span id="high-score-display" class="text-2xl font-black italic gold-text">0</span>
+            <span id="high-score-display" class="text-2xl font-black italic gold-text leading-none">0</span>
         </div>
     </div>
 
@@ -93,7 +78,7 @@
         </div>
         <div id="loading-state" class="hidden flex flex-col items-center justify-center gap-2 py-2">
             <span class="loader"></span>
-            <p class="text-[10px] font-bold gold-text uppercase">Syncing NFT Data...</p>
+            <p class="text-[10px] font-bold gold-text uppercase">Syncing NFT...</p>
         </div>
     </div>
 
@@ -116,7 +101,8 @@
 
     <script>
         const ADDR = "0xb9a48902dccdf4fef09ab6b46be4161552519898";
-        const RPC = "https://rpc.apechain.com/http";
+        // New Reliable RPC
+        const RPC = "https://apechain.calderachain.xyz/http";
         const GAME_LINK = "https://rekt-lab.github.io/Potcake/";
 
         const canvas = document.getElementById('gameCanvas');
@@ -160,28 +146,33 @@
             document.getElementById('load-box').classList.add('hidden');
             document.getElementById('loading-state').classList.remove('hidden');
 
-            // Force proceed after 5 seconds if connection hangs
-            const timeout = setTimeout(() => {
-                alert("Connection slow. Using default Potcake!");
-                finalizeLoading();
-            }, 5500);
+            const timeout = setTimeout(() => { finalizeLoading(); }, 6000);
 
             try {
                 const provider = new ethers.JsonRpcProvider(RPC);
                 const contract = new ethers.Contract(ADDR, ["function tokenURI(uint256) view returns (string)"], provider);
-                const uri = await contract.tokenURI(parseInt(idInput));
-                const httpUri = uri.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
-                const meta = await (await fetch(httpUri)).json();
-                const imageUri = meta.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                const uri = await contract.tokenURI(BigInt(idInput));
                 
-                potcakeImg.src = imageUri;
-                potcakeImg.onload = () => {
-                    clearTimeout(timeout);
+                // Try multiple gateways if one hangs
+                const gateways = ["https://cloudflare-ipfs.com/ipfs/", "https://ipfs.io/ipfs/", "https://gateway.pinata.cloud/ipfs/"];
+                let metadata = null;
+
+                for (let gw of gateways) {
+                    try {
+                        const response = await fetch(uri.replace("ipfs://", gw));
+                        if (response.ok) { metadata = await response.json(); break; }
+                    } catch(e) {}
+                }
+
+                if (metadata && metadata.image) {
+                    const imgUrl = metadata.image.replace("ipfs://", "https://cloudflare-ipfs.com/ipfs/");
+                    potcakeImg.src = imgUrl;
+                    potcakeImg.onload = () => { clearTimeout(timeout); finalizeLoading(); };
+                } else {
                     finalizeLoading();
-                };
+                }
             } catch(e) {
-                console.error(e);
-                clearTimeout(timeout);
+                console.error("NFT Fetch error:", e);
                 finalizeLoading();
             }
         }
@@ -220,11 +211,9 @@
             if(score > 15) { ctx.fillStyle = "rgba(255, 100, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
             if(lives === 1) { ctx.fillStyle = "rgba(255, 0, 0, 0.15)"; ctx.fillRect(0,0,400,400); }
 
-            // Golden Shine Effect at score 50
             if (score >= 50) {
                 ctx.save();
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = "gold";
+                ctx.shadowBlur = 30; ctx.shadowColor = "gold";
                 ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
                 ctx.restore();
             } else {
