@@ -7,77 +7,100 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #07090a; color: white; font-family: 'Georgia', serif; overflow-x: hidden; touch-action: none; margin: 0; }
+        body { 
+            background: #07090a; 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            overflow-x: hidden; 
+            touch-action: none; 
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
         .wood-panel { 
             background: linear-gradient(135deg, #3d2b1f 0%, #2a1d15 100%);
             border: 4px solid #1a110a;
             box-shadow: inset 0 0 15px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.8);
             border-radius: 1.5rem; position: relative;
         }
-        #gameCanvas { width: 100%; max-width: 400px; border-radius: 2rem; border: 6px solid #2a1d15; background: #111; display: block; margin: 0 auto; }
+        /* Mobile Responsive Canvas */
+        #gameCanvas { 
+            width: 100%; 
+            max-width: 400px; 
+            aspect-ratio: 1/1;
+            border-radius: 2rem; 
+            border: 6px solid #2a1d15; 
+            background: #111; 
+            display: block; 
+            margin: 0 auto;
+            touch-action: none; 
+        }
         #game-over-screen { 
-            display: none; position: fixed; inset: 0; z-index: 100; 
-            background: rgba(10, 5, 0, 0.94); align-items: center; justify-content: center; 
-            flex-direction: column; backdrop-filter: blur(10px); 
+            display: none; position: absolute; inset: 0; z-index: 100; 
+            background: rgba(10, 5, 0, 0.9); align-items: center; justify-content: center; 
+            flex-direction: column; backdrop-filter: blur(8px); border-radius: 2rem;
         }
         .gold-text { color: #fbbf24; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .btn-wood { background: #5d4037; border-bottom: 4px solid #3e2723; transition: all 0.1s; color: #ffe0b2; }
         .loader { width: 30px; height: 30px; border: 4px solid #fbbf24; border-bottom-color: transparent; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        #nft-preview-container { width: 100px; height: 100px; border: 2px dashed #5d4037; border-radius: 12px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
-        #nft-preview-container.loaded { border: 2px solid #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+        #nft-preview-container { width: 80px; height: 80px; border: 2px dashed #5d4037; border-radius: 12px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; }
         #preview-img { width: 100%; height: 100%; object-fit: cover; display: none; }
-        #trait-list { display: flex; gap: 6px; overflow-x: auto; padding: 4px; width: 100%; max-width: 320px; scrollbar-width: none; }
-        .trait-badge { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-size: 10px; white-space: nowrap; font-weight: bold; }
+        #trait-list { display: flex; gap: 6px; overflow-x: auto; padding: 4px; width: 100%; scrollbar-width: none; }
+        .trait-badge { background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-size: 10px; white-space: nowrap; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="p-2">
 
     <div class="mt-2 mb-2 text-center">
-        <h1 class="text-3xl font-black italic gold-text">POTCAKE PARADISE</h1>
+        <h1 class="text-2xl font-black italic gold-text">POTCAKE PARADISE</h1>
     </div>
 
-    <div id="score-bar" class="w-full max-w-sm wood-panel py-3 px-6 mb-3 flex justify-between items-center z-20">
+    <div id="score-bar" class="w-full max-w-[400px] wood-panel py-2 px-4 mb-2 flex justify-between items-center z-20">
         <div class="flex flex-col">
-            <span class="text-[9px] uppercase font-bold text-orange-200/50">Score</span>
-            <span id="score-display" class="text-2xl font-black italic text-white">0</span>
+            <span class="text-[8px] uppercase font-bold text-orange-200/50">Score</span>
+            <span id="score-display" class="text-xl font-black italic text-white">0</span>
         </div>
-        <div id="life-display" class="text-xl">❤️❤️</div>
+        <div id="life-display" class="text-lg">❤️❤️</div>
         <div class="flex flex-col items-end">
-            <span class="text-[9px] uppercase font-bold text-orange-200/50">Best</span>
-            <span id="high-score-display" class="text-2xl font-black italic gold-text">0</span>
+            <span class="text-[8px] uppercase font-bold text-orange-200/50">Best</span>
+            <span id="high-score-display" class="text-xl font-black italic gold-text">0</span>
         </div>
     </div>
 
-    <div id="input-panel" class="w-full max-w-sm wood-panel p-4 mb-4 z-10 flex flex-col items-center">
-        <div id="nft-preview-container">
-            <span id="preview-placeholder" class="text-[10px] text-orange-200/40 font-bold">NO NFT</span>
-            <img id="preview-img" alt="Potcake">
-        </div>
-        <div id="trait-list" class="mt-2 mb-3"></div>
-
-        <div id="load-box" class="flex flex-col gap-3 w-full">
-            <div class="flex gap-2">
-                <input id="tokenId" type="number" placeholder="Enter ID" class="bg-black/40 flex-1 px-4 py-3 rounded-xl border border-white/10 text-white outline-none">
-                <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-6 py-3 rounded-xl font-black text-xs uppercase">Sync</button>
+    <div id="input-panel" class="w-full max-w-[400px] wood-panel p-3 mb-3 z-10 flex flex-col items-center">
+        <div class="flex items-center gap-4 w-full">
+            <div id="nft-preview-container">
+                <span id="preview-placeholder" class="text-[8px] text-orange-200/40 font-bold">NO NFT</span>
+                <img id="preview-img" alt="Potcake">
             </div>
-            <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-4 rounded-xl font-black text-xs uppercase">Start Game</button>
+            <div id="load-box" class="flex-1 flex flex-col gap-2">
+                <div class="flex gap-2">
+                    <input id="tokenId" type="number" placeholder="ID" class="bg-black/40 flex-1 px-3 py-2 rounded-lg border border-white/10 text-white text-sm outline-none">
+                    <button onclick="fetchPotcake()" class="bg-amber-100 text-amber-900 px-4 py-2 rounded-lg font-black text-[10px] uppercase">Sync</button>
+                </div>
+                <button id="start-btn" onclick="startGame()" class="hidden bg-green-600 text-white w-full py-2 rounded-lg font-black text-xs uppercase">Start Game</button>
+            </div>
         </div>
+        <div id="trait-list" class="mt-2"></div>
         
-        <div id="loading-state" class="hidden flex flex-col items-center justify-center gap-2 py-2">
+        <div id="loading-state" class="hidden flex items-center gap-3 py-2">
             <span class="loader"></span>
-            <button onclick="finalizeLoading()" class="text-[10px] font-bold text-white underline uppercase">Skip to Play</button>
+            <button onclick="finalizeLoading()" class="text-[10px] font-bold text-white underline uppercase">Skip</button>
         </div>
     </div>
 
-    <div class="w-full max-w-sm relative">
+    <div class="w-full max-w-[400px] relative">
         <canvas id="gameCanvas" width="400" height="400"></canvas>
         <div id="game-over-screen">
-            <div class="wood-panel p-8 flex flex-col items-center min-w-[280px]">
-                <p id="final-score" class="text-7xl font-black mb-8 italic text-white">0</p>
-                <button onclick="startGame()" class="btn-wood w-full py-4 rounded-xl font-black text-xs uppercase mb-3">Retry</button>
-                <button onclick="shareScore()" class="bg-sky-900 text-white w-full py-3 rounded-xl font-black text-[9px] uppercase">X Post 🚀</button>
+            <p class="text-orange-200/60 text-xs font-bold uppercase mb-1">Game Over</p>
+            <p id="final-score" class="text-6xl font-black mb-6 italic text-white">0</p>
+            <div class="w-48 flex flex-col gap-2">
+                <button onclick="startGame()" class="btn-wood py-3 rounded-xl font-black text-xs uppercase">Retry</button>
+                <button onclick="shareScore()" class="bg-sky-600 text-white py-3 rounded-xl font-black text-[10px] uppercase">Share to X</button>
             </div>
         </div>
     </div>
@@ -94,10 +117,10 @@
         backgroundImg.crossOrigin = "anonymous";
         backgroundImg.src = "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800";
 
-        let megaBoneColor = "#fbbf24"; // Default Gold
+        let megaBoneColor = "#fbbf24"; 
         potcakeImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E🐶%3C/text%3E%3C/svg%3E";
 
-        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 80, items = [];
+        let gameActive = false, score = 0, lives = 2, playerX = 160, playerWidth = 70, items = [];
         let highScore = localStorage.getItem('potcakeBest') || 0;
         document.getElementById('high-score-display').innerText = highScore;
 
@@ -124,7 +147,6 @@
                     document.getElementById('preview-placeholder').style.display = 'none';
                     const pImg = document.getElementById('preview-img');
                     pImg.src = imgUrl; pImg.style.display = 'block';
-                    document.getElementById('nft-preview-container').classList.add('loaded');
                     
                     if(meta.attributes) {
                         meta.attributes.forEach(attr => {
@@ -132,11 +154,7 @@
                             badge.className = 'trait-badge';
                             badge.innerText = `${attr.trait_type}: ${attr.value}`;
                             traitContainer.appendChild(badge);
-                            
-                            // SYNC MEGA BONE COLOR TO BACKGROUND TRAIT
-                            if(attr.trait_type.toLowerCase() === "background") {
-                                megaBoneColor = attr.value.toLowerCase();
-                            }
+                            if(attr.trait_type.toLowerCase() === "background") megaBoneColor = attr.value.toLowerCase();
                         });
                     }
                     finalizeLoading();
@@ -155,63 +173,75 @@
             score = 0; lives = 2; items = []; playerX = 160;
             document.getElementById('score-display').innerText = "0";
             document.getElementById('life-display').innerText = "❤️❤️";
-            gameActive = true; gameLoop();
+            gameActive = true; 
+            requestAnimationFrame(gameLoop);
         }
 
         function gameLoop() {
             if (!gameActive) return;
             ctx.clearRect(0, 0, 400, 400);
             ctx.drawImage(backgroundImg, 0, 0, 400, 400);
-            ctx.drawImage(potcakeImg, playerX, 300, playerWidth, playerWidth);
+            ctx.drawImage(potcakeImg, playerX, 310, playerWidth, playerWidth);
 
             if (Math.random() < 0.04) {
                 let type = Math.random() < 0.1 ? "mega" : "normal";
-                items.push({ x: Math.random() * 350, y: -20, speed: 4 + (score/15), type: type });
+                items.push({ x: Math.random() * 360, y: -40, speed: 4 + (score/20), type: type });
             }
 
-            items.forEach((item, index) => {
+            for(let i = items.length - 1; i >= 0; i--) {
+                let item = items[i];
                 item.y += item.speed;
                 
+                ctx.font = item.type === "mega" ? "50px serif" : "30px serif";
                 if(item.type === "mega") {
-                    ctx.save();
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = megaBoneColor;
-                    ctx.font = "50px serif";
-                    ctx.fillText("🦴", item.x, item.y);
-                    ctx.restore();
-                } else {
-                    ctx.font = "30px serif";
-                    ctx.fillText("🦴", item.x, item.y);
+                    ctx.shadowBlur = 15; ctx.shadowColor = megaBoneColor;
+                }
+                ctx.fillText("🦴", item.x, item.y);
+                ctx.shadowBlur = 0;
+
+                // Collision detection
+                if (item.y > 300 && item.y < 380 && item.x > playerX - 20 && item.x < playerX + playerWidth) {
+                    score += (item.type === "mega" ? 5 : 1);
+                    items.splice(i, 1);
+                    document.getElementById('score-display').innerText = score;
+                    continue;
                 }
 
-                if (item.y > 300 && item.y < 380 && item.x > playerX - 10 && item.x < playerX + 70) {
-                    score += (item.type === "mega" ? 3 : 1);
-                    items.splice(index, 1);
-                    document.getElementById('score-display').innerText = score;
-                }
-                if (item.y > 410) {
-                    items.splice(index, 1);
+                if (item.y > 420) {
+                    items.splice(i, 1);
                     lives--;
                     document.getElementById('life-display').innerText = "❤️".repeat(Math.max(0, lives));
                     if (lives <= 0) endGame();
                 }
-            });
+            }
             requestAnimationFrame(gameLoop);
         }
 
         function endGame() {
             gameActive = false;
             if (score > highScore) { highScore = score; localStorage.setItem('potcakeBest', highScore); }
+            document.getElementById('high-score-display').innerText = highScore;
             document.getElementById('game-over-screen').style.display = 'flex';
             document.getElementById('final-score').innerText = score;
         }
 
-        canvas.addEventListener('touchmove', (e) => {
+        // Improved Mobile Touch Handling
+        function handleInput(e) {
             const rect = canvas.getBoundingClientRect();
-            playerX = ((e.touches[0].clientX - rect.left) / rect.width * 400) - 40;
-            playerX = Math.max(0, Math.min(320, playerX));
-            e.preventDefault();
-        }, {passive: false});
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const scaleX = (clientX - rect.left) / rect.width;
+            playerX = (scaleX * 400) - (playerWidth / 2);
+            playerX = Math.max(0, Math.min(400 - playerWidth, playerX));
+            if(e.cancelable) e.preventDefault();
+        }
+
+        canvas.addEventListener('touchstart', handleInput, {passive: false});
+        canvas.addEventListener('touchmove', handleInput, {passive: false});
+        canvas.addEventListener('mousedown', (e) => {
+            canvas.onmousemove = handleInput;
+            handleInput(e);
+        });
+        window.onmouseup = () => canvas.onmousemove = null;
 
         function shareScore() {
             const text = `I just caught ${score} bones in Potcake Paradise! 🦴🏝️\n\nPlay here: ${GAME_LINK}\n\n@potcakenft #ApeChain`;
